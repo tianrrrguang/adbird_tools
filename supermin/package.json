@@ -1,15 +1,19 @@
 {
     "name": "supermin",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "super min",
     "main": "index.js",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/tianrrrguang/adbird_tools.git"
+    },
     "bin": {
         "supermin": "./index.js"
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
-    "author": "aguangtian",
+    "author": "tianeeeguang",
     "license": "ISC",
     "dependencies": {
         "async": "^2.6.1",
