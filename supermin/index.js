@@ -6,10 +6,14 @@ const glob = require("glob");
 const fs = require("fs-extra");
 const chalk = require('chalk');
 const asycn = require('async');
+const execFile = require('child_process').execFile;
+
+//compress
+const htmlminify = require('html-minifier').minify;
 const UglifyJS = require("uglify-js");
 const csso = require('csso');
 const PngQuant = require('pngquant');
-const htmlminify = require('html-minifier').minify;
+const jpegtran = require('jpegtran-bin');
 
 class Supermin {
 
@@ -84,10 +88,15 @@ class Supermin {
                     break;
                 case '.mp3':
                 case '.ogg':
+                case '.m4a':
                     this.compressMp3(file, cb);
                     break;
                 case '.png':
                     this.compressPng(file, cb);
+                    break;
+                case '.jpg':
+                case '.jpeg':
+                    this.compressJpeg(file, cb);
                     break;
                 default:
                     this.compressSkip(file, cb);
@@ -100,13 +109,19 @@ class Supermin {
 
     //压缩js文件
     compressJs(file, cb) {
+        if( file.indexOf('min.') > 0 ){
+            fs.copyFileSync(file, this.getOutputFilePath(file));
+            process.stdout.write(chalk.green(`Ignore\n`));
+            cb && cb();
+            return;
+        }
         let code = fs.readFileSync(file).toString();
         let result = UglifyJS.minify(code, {
             compress: true
         });
         if (result.error) {
             fs.copyFileSync(file, this.getOutputFilePath(file));
-            process.stdout.write(chalk.red(`${result.error}\n`));
+            process.stdout.write(chalk.yellow(`Skip\n`));
         }
         else {
             fs.writeFileSync(this.getOutputFilePath(file), result.code);
@@ -154,7 +169,12 @@ class Supermin {
     }
 
     compressMp3(file, cb) {
-        fs.writeFileSync(this.getOutputFilePath(file), '');
+        if( this.keepMusic ){
+            fs.copyFileSync(file, this.getOutputFilePath(file));
+        }
+        else{
+            fs.writeFileSync(this.getOutputFilePath(file), '');
+        }
         process.stdout.write(chalk.green(`OK\n`));
         cb && cb();
     }
@@ -170,6 +190,7 @@ class Supermin {
             let tmp = readStream.pipe(myPngQuanter)
                 .on('error', (err) => {
                     process.stdout.write(chalk.yellow(`Skip(1)\n`));
+                    fs.copyFileSync(file, outFile);
                     cb();
                 })
                 .pipe(outStream)
@@ -177,6 +198,7 @@ class Supermin {
         outStream
             .on('error', (err) => {
                 process.stdout.write(chalk.yellow(`Skip(2)\n`));
+                fs.copyFileSync(file, outFile);
                 cb();
             })
             .on('finish', () => {
@@ -188,6 +210,25 @@ class Supermin {
                 }
                 cb();
             })
+    }
+
+    //压缩jpeg
+    compressJpeg(file, cb) {
+        let outFile = this.getOutputFilePath(file);
+        execFile(jpegtran, ['-copy', 'none', '-optimize', '-progressiv', '-outfile', outFile, file], function (err) {
+            if( err ){
+                process.stdout.write(chalk.yellow(`Skip\n`));
+            }
+            else{
+                process.stdout.write(chalk.green(`OK\n`));
+                let size1 = fs.statSync(file).size;
+                let size2 = fs.statSync(outFile).size;
+                if (size2 > size1) {
+                    fs.copyFileSync(file, outFile);
+                }
+            }
+            cb();
+        });
     }
 
     compressSkip(file, cb) {
