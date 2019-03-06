@@ -1,4 +1,4 @@
-# supermin
+# H5游戏压缩工具
 用法:
 1. npm i supermin -g
 1. cd /path/to/game
